@@ -1,2 +1,1 @@
-# Digital-clock
-By java
+# Chat Application by java #
