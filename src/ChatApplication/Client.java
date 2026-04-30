@@ -13,7 +13,6 @@ import java.util.Calendar;
 
 public class Client implements ActionListener {
 
-    // ── Same colour palette as Server ────────────────────────────────
     static final Color BG_DARK      = new Color(18, 18, 28);
     static final Color BG_PANEL     = new Color(26, 26, 40);
     static final Color HEADER_COLOR = new Color(30, 30, 48);
@@ -26,9 +25,9 @@ public class Client implements ActionListener {
     static final Color ONLINE_DOT   = new Color(72, 199, 142);
 
     JTextField text;
-    static JPanel    chatArea;
-    static Box       verticle = Box.createVerticalBox();
-    static JFrame    ff       = new JFrame();
+    static JPanel      chatArea;
+    static JScrollPane scrollPane;
+    static JFrame      ff   = new JFrame();
     static DataOutputStream dout;
 
     Client() {
@@ -40,18 +39,17 @@ public class Client implements ActionListener {
         ff.getContentPane().setBackground(BG_DARK);
         ff.setShape(new RoundRectangle2D.Double(0, 0, 460, 720, 20, 20));
 
-        ff.add(buildHeader("Ahnaf", "Client"), BorderLayout.NORTH);
-        ff.add(buildChatPanel(),               BorderLayout.CENTER);
-        ff.add(buildInputBar(),                BorderLayout.SOUTH);
+        ff.add(buildHeader("Ahnaf"), BorderLayout.NORTH);
+        ff.add(buildChatPanel(),     BorderLayout.CENTER);
+        ff.add(buildInputBar(),      BorderLayout.SOUTH);
 
         ff.setVisible(true);
     }
 
     // ── Header ───────────────────────────────────────────────────────
-    private JPanel buildHeader(String name, String role) {
+    private JPanel buildHeader(String name) {
         JPanel header = new JPanel(new BorderLayout()) {
             protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
                 g.setColor(HEADER_COLOR);
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
@@ -60,19 +58,17 @@ public class Client implements ActionListener {
         header.setPreferredSize(new Dimension(460, 72));
         header.setBorder(new EmptyBorder(10, 16, 10, 16));
 
-        // Avatar
         JLabel avatar = new JLabel() {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(236, 72, 153)); // pink for client
+                g2.setColor(new Color(236, 72, 153));
                 g2.fillOval(0, 0, 46, 46);
                 g2.setColor(TEXT_PRIMARY);
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
                 FontMetrics fm = g2.getFontMetrics();
-                String initials = name.substring(0, 1).toUpperCase();
-                g2.drawString(initials,
-                        (46 - fm.stringWidth(initials)) / 2,
+                String ini = name.substring(0, 1).toUpperCase();
+                g2.drawString(ini, (46 - fm.stringWidth(ini)) / 2,
                         (46 - fm.getHeight()) / 2 + fm.getAscent());
                 g2.setColor(ONLINE_DOT);
                 g2.fillOval(32, 32, 12, 12);
@@ -88,15 +84,12 @@ public class Client implements ActionListener {
         info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
         info.setOpaque(false);
         info.setBorder(new EmptyBorder(0, 12, 0, 0));
-
         JLabel nameLabel = new JLabel(name);
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
         nameLabel.setForeground(TEXT_PRIMARY);
-
         JLabel statusLabel = new JLabel("● Online");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         statusLabel.setForeground(ONLINE_DOT);
-
         info.add(nameLabel);
         info.add(statusLabel);
 
@@ -115,15 +108,15 @@ public class Client implements ActionListener {
             public void mouseExited(MouseEvent e)  { close.setForeground(TEXT_MUTED); }
         });
 
-        final Point[] dragStart = {null};
+        final Point[] drag = {null};
         header.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) { dragStart[0] = e.getPoint(); }
+            public void mousePressed(MouseEvent e) { drag[0] = e.getPoint(); }
         });
         header.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseDragged(MouseEvent e) {
                 Point loc = ff.getLocation();
-                ff.setLocation(loc.x + e.getX() - dragStart[0].x,
-                               loc.y + e.getY() - dragStart[0].y);
+                ff.setLocation(loc.x + e.getX() - drag[0].x,
+                               loc.y + e.getY() - drag[0].y);
             }
         });
 
@@ -134,19 +127,16 @@ public class Client implements ActionListener {
 
     // ── Chat scroll area ─────────────────────────────────────────────
     private JScrollPane buildChatPanel() {
-        chatArea = new JPanel();
-        chatArea.setLayout(new BoxLayout(chatArea, BoxLayout.Y_AXIS));
+        chatArea = new JPanel(new GridBagLayout());
         chatArea.setBackground(BG_DARK);
-        chatArea.setBorder(new EmptyBorder(12, 8, 12, 8));
-        chatArea.add(verticle);
+        chatArea.setBorder(new EmptyBorder(10, 8, 10, 8));
 
-        JScrollPane scrollPane = new JScrollPane(chatArea);
+        scrollPane = new JScrollPane(chatArea);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setBackground(BG_DARK);
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setBackground(BG_DARK);
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(4, 0));
         return scrollPane;
     }
@@ -208,10 +198,8 @@ public class Client implements ActionListener {
         try {
             String out = text.getText().trim();
             if (out.isEmpty()) return;
-
             addBubble(out, true);
             text.setText("");
-
             if (dout != null) dout.writeUTF(out);
         } catch (Exception e) {
             e.printStackTrace();
@@ -220,22 +208,22 @@ public class Client implements ActionListener {
 
     // ── Bubble builder ───────────────────────────────────────────────
     public static JPanel makeBubble(String msg, boolean outgoing) {
-        Color bubbleColor = outgoing ? BUBBLE_OUT : BUBBLE_IN;
+        Color bg = outgoing ? BUBBLE_OUT : BUBBLE_IN;
 
         JPanel bubble = new JPanel() {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(bubbleColor);
+                g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
                 g2.dispose();
             }
         };
         bubble.setOpaque(false);
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
-        bubble.setBorder(new EmptyBorder(10, 14, 6, 14));
+        bubble.setBorder(new EmptyBorder(8, 12, 6, 12));
 
-        JLabel msgLabel = new JLabel("<html><p style='width:180px;'>" + msg + "</p></html>");
+        JLabel msgLabel = new JLabel("<html><p style='width:170px;'>" + msg + "</p></html>");
         msgLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         msgLabel.setForeground(TEXT_PRIMARY);
 
@@ -250,20 +238,50 @@ public class Client implements ActionListener {
         return bubble;
     }
 
+    // ── Add bubble row using GridBagLayout (no extra gap) ────────────
+    static int rowCount = 0;
+
     static void addBubble(String msg, boolean outgoing) {
         JPanel bubble = makeBubble(msg, outgoing);
-        JPanel row = new JPanel(new FlowLayout(outgoing ? FlowLayout.RIGHT : FlowLayout.LEFT, 8, 2));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(440, Integer.MAX_VALUE));
-        row.add(bubble);
 
-        verticle.add(row);
-        verticle.add(Box.createVerticalStrut(4));
-        ff.revalidate();
-        ff.repaint();
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setBorder(new EmptyBorder(2, 4, 2, 4));
+        if (outgoing) row.add(bubble, BorderLayout.EAST);
+        else          row.add(bubble, BorderLayout.WEST);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx   = 0;
+        gbc.gridy   = rowCount++;
+        gbc.weightx = 1.0;
+        gbc.fill    = GridBagConstraints.HORIZONTAL;
+        gbc.anchor  = GridBagConstraints.NORTH;
+        gbc.insets  = new Insets(0, 0, 0, 0);
+
+        chatArea.add(row, gbc);
+
+        // Filler pushes rows to top
+        GridBagConstraints filler = new GridBagConstraints();
+        filler.gridx   = 0;
+        filler.gridy   = rowCount;
+        filler.weighty = 1.0;
+        filler.fill    = GridBagConstraints.VERTICAL;
+        if (rowCount > 1) {
+            chatArea.remove(chatArea.getComponentCount() - 1);
+        }
+        chatArea.add(new JPanel() {{ setOpaque(false); }}, filler);
+
+        chatArea.revalidate();
+        chatArea.repaint();
+
+        SwingUtilities.invokeLater(() ->
+            scrollPane.getVerticalScrollBar().setValue(
+                scrollPane.getVerticalScrollBar().getMaximum()
+            )
+        );
     }
 
-    // ── Socket client (background thread) ───────────────────────────
+    // ── Socket client ────────────────────────────────────────────────
     public static void startClient() {
         new Thread(() -> {
             try {
@@ -271,7 +289,6 @@ public class Client implements ActionListener {
                 DataInputStream din = new DataInputStream(s.getInputStream());
                 dout = new DataOutputStream(s.getOutputStream());
                 System.out.println("Connected to server!");
-
                 while (true) {
                     String msg = din.readUTF();
                     SwingUtilities.invokeLater(() -> addBubble(msg, false));

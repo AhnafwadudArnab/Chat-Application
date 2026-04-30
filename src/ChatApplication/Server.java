@@ -15,57 +15,51 @@ import java.util.Calendar;
 public class Server implements ActionListener {
 
     // ── Colour palette ──────────────────────────────────────────────
-    static final Color BG_DARK       = new Color(18, 18, 28);
-    static final Color BG_PANEL      = new Color(26, 26, 40);
-    static final Color HEADER_COLOR  = new Color(30, 30, 48);
-    static final Color BUBBLE_OUT    = new Color(99, 102, 241);   // indigo
-    static final Color BUBBLE_IN     = new Color(38, 38, 58);
-    static final Color INPUT_BG      = new Color(38, 38, 58);
-    static final Color SEND_BTN      = new Color(99, 102, 241);
-    static final Color TEXT_PRIMARY  = new Color(240, 240, 255);
-    static final Color TEXT_MUTED    = new Color(140, 140, 170);
-    static final Color ONLINE_DOT    = new Color(72, 199, 142);
+    static final Color BG_DARK      = new Color(18, 18, 28);
+    static final Color BG_PANEL     = new Color(26, 26, 40);
+    static final Color HEADER_COLOR = new Color(30, 30, 48);
+    static final Color BUBBLE_OUT   = new Color(99, 102, 241);
+    static final Color BUBBLE_IN    = new Color(38, 38, 58);
+    static final Color INPUT_BG     = new Color(38, 38, 58);
+    static final Color SEND_BTN     = new Color(99, 102, 241);
+    static final Color TEXT_PRIMARY = new Color(240, 240, 255);
+    static final Color TEXT_MUTED   = new Color(140, 140, 170);
+    static final Color ONLINE_DOT   = new Color(72, 199, 142);
 
-    JTextField text;
-    JPanel     chatArea;
-    JScrollPane scrollPane;
-    static Box      vertical = Box.createVerticalBox();
-    static JFrame   f        = new JFrame();
+    JTextField  text;
+    static JPanel      chatArea;
+    static JScrollPane scrollPane;
+    static JFrame      f    = new JFrame();
     static DataOutputStream dout = null;
 
     Server() {
         f.setUndecorated(true);
         f.setSize(460, 720);
-        f.setLocationRelativeTo(null);
         f.setLocation(180, 60);
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         f.setLayout(new BorderLayout());
         f.getContentPane().setBackground(BG_DARK);
         f.setShape(new RoundRectangle2D.Double(0, 0, 460, 720, 20, 20));
 
-        f.add(buildHeader("Ahnaf", "Server"), BorderLayout.NORTH);
-        f.add(buildChatPanel(),               BorderLayout.CENTER);
-        f.add(buildInputBar(),                BorderLayout.SOUTH);
+        f.add(buildHeader("Ahnaf"), BorderLayout.NORTH);
+        f.add(buildChatPanel(),     BorderLayout.CENTER);
+        f.add(buildInputBar(),      BorderLayout.SOUTH);
 
         f.setVisible(true);
     }
 
     // ── Header ───────────────────────────────────────────────────────
-    private JPanel buildHeader(String name, String role) {
+    private JPanel buildHeader(String name) {
         JPanel header = new JPanel(new BorderLayout()) {
             protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(HEADER_COLOR);
-                g2.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(HEADER_COLOR);
+                g.fillRect(0, 0, getWidth(), getHeight());
             }
         };
         header.setOpaque(false);
         header.setPreferredSize(new Dimension(460, 72));
         header.setBorder(new EmptyBorder(10, 16, 10, 16));
 
-        // Avatar
         JLabel avatar = new JLabel() {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -75,11 +69,9 @@ public class Server implements ActionListener {
                 g2.setColor(TEXT_PRIMARY);
                 g2.setFont(new Font("Segoe UI", Font.BOLD, 18));
                 FontMetrics fm = g2.getFontMetrics();
-                String initials = name.substring(0, 1).toUpperCase();
-                g2.drawString(initials,
-                        (46 - fm.stringWidth(initials)) / 2,
+                String ini = name.substring(0, 1).toUpperCase();
+                g2.drawString(ini, (46 - fm.stringWidth(ini)) / 2,
                         (46 - fm.getHeight()) / 2 + fm.getAscent());
-                // Online dot
                 g2.setColor(ONLINE_DOT);
                 g2.fillOval(32, 32, 12, 12);
                 g2.setColor(HEADER_COLOR);
@@ -90,20 +82,16 @@ public class Server implements ActionListener {
         };
         avatar.setPreferredSize(new Dimension(46, 46));
 
-        // Name + status
         JPanel info = new JPanel();
         info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
         info.setOpaque(false);
         info.setBorder(new EmptyBorder(0, 12, 0, 0));
-
         JLabel nameLabel = new JLabel(name);
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
         nameLabel.setForeground(TEXT_PRIMARY);
-
         JLabel statusLabel = new JLabel("● Online");
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         statusLabel.setForeground(ONLINE_DOT);
-
         info.add(nameLabel);
         info.add(statusLabel);
 
@@ -112,7 +100,6 @@ public class Server implements ActionListener {
         left.add(avatar);
         left.add(info);
 
-        // Close button
         JLabel close = new JLabel("✕");
         close.setFont(new Font("Segoe UI", Font.BOLD, 14));
         close.setForeground(TEXT_MUTED);
@@ -123,16 +110,15 @@ public class Server implements ActionListener {
             public void mouseExited(MouseEvent e)  { close.setForeground(TEXT_MUTED); }
         });
 
-        // Drag to move window
-        final Point[] dragStart = {null};
+        final Point[] drag = {null};
         header.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) { dragStart[0] = e.getPoint(); }
+            public void mousePressed(MouseEvent e) { drag[0] = e.getPoint(); }
         });
         header.addMouseMotionListener(new MouseMotionAdapter() {
             public void mouseDragged(MouseEvent e) {
                 Point loc = f.getLocation();
-                f.setLocation(loc.x + e.getX() - dragStart[0].x,
-                              loc.y + e.getY() - dragStart[0].y);
+                f.setLocation(loc.x + e.getX() - drag[0].x,
+                              loc.y + e.getY() - drag[0].y);
             }
         });
 
@@ -143,11 +129,10 @@ public class Server implements ActionListener {
 
     // ── Chat scroll area ─────────────────────────────────────────────
     private JScrollPane buildChatPanel() {
-        chatArea = new JPanel();
-        chatArea.setLayout(new BoxLayout(chatArea, BoxLayout.Y_AXIS));
+        // Use GridBagLayout so bubbles stack tightly from top
+        chatArea = new JPanel(new GridBagLayout());
         chatArea.setBackground(BG_DARK);
-        chatArea.setBorder(new EmptyBorder(12, 8, 12, 8));
-        chatArea.add(vertical);
+        chatArea.setBorder(new EmptyBorder(10, 8, 10, 8));
 
         scrollPane = new JScrollPane(chatArea);
         scrollPane.setOpaque(false);
@@ -155,8 +140,6 @@ public class Server implements ActionListener {
         scrollPane.setBorder(null);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setBackground(BG_DARK);
-        // Hide scrollbar UI
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(4, 0));
         return scrollPane;
     }
@@ -183,8 +166,6 @@ public class Server implements ActionListener {
         text.setCaretColor(TEXT_PRIMARY);
         text.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         text.setBorder(new EmptyBorder(10, 16, 10, 16));
-        text.putClientProperty("JTextField.placeholderText", "Type a message…");
-        // Enter key sends
         text.addActionListener(this);
 
         JButton send = new JButton("Send") {
@@ -220,10 +201,8 @@ public class Server implements ActionListener {
         try {
             String out = text.getText().trim();
             if (out.isEmpty()) return;
-
             addBubble(out, true);
             text.setText("");
-
             if (dout != null) dout.writeUTF(out);
         } catch (Exception e) {
             e.printStackTrace();
@@ -232,28 +211,26 @@ public class Server implements ActionListener {
 
     // ── Bubble builder ───────────────────────────────────────────────
     public static JPanel makeBubble(String msg, boolean outgoing) {
-        Color bubbleColor = outgoing ? BUBBLE_OUT : BUBBLE_IN;
-        Color textColor   = TEXT_PRIMARY;
+        Color bg = outgoing ? BUBBLE_OUT : BUBBLE_IN;
 
         JPanel bubble = new JPanel() {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(bubbleColor);
+                g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
                 g2.dispose();
             }
         };
         bubble.setOpaque(false);
         bubble.setLayout(new BoxLayout(bubble, BoxLayout.Y_AXIS));
-        bubble.setBorder(new EmptyBorder(10, 14, 6, 14));
+        bubble.setBorder(new EmptyBorder(8, 12, 6, 12));
 
-        JLabel msgLabel = new JLabel("<html><p style='width:180px;'>" + msg + "</p></html>");
+        JLabel msgLabel = new JLabel("<html><p style='width:170px;'>" + msg + "</p></html>");
         msgLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        msgLabel.setForeground(textColor);
+        msgLabel.setForeground(TEXT_PRIMARY);
 
-        Calendar cal = Calendar.getInstance();
-        JLabel timeLabel = new JLabel(new SimpleDateFormat("HH:mm").format(cal.getTime()));
+        JLabel timeLabel = new JLabel(new SimpleDateFormat("HH:mm").format(Calendar.getInstance().getTime()));
         timeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         timeLabel.setForeground(new Color(200, 200, 220, 160));
         timeLabel.setAlignmentX(outgoing ? Component.RIGHT_ALIGNMENT : Component.LEFT_ALIGNMENT);
@@ -264,40 +241,63 @@ public class Server implements ActionListener {
         return bubble;
     }
 
+    // ── Add bubble row using GridBagLayout (no extra gap) ────────────
+    static int rowCount = 0;
+
     static void addBubble(String msg, boolean outgoing) {
         JPanel bubble = makeBubble(msg, outgoing);
-        JPanel row = new JPanel(new FlowLayout(outgoing ? FlowLayout.RIGHT : FlowLayout.LEFT, 8, 2));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(440, Integer.MAX_VALUE));
-        row.add(bubble);
 
-        vertical.add(row);
-        vertical.add(Box.createVerticalStrut(4));
-        f.revalidate();
-        f.repaint();
+        // Wrapper row — full width, aligns bubble left or right
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setBorder(new EmptyBorder(2, 4, 2, 4));
+        if (outgoing) row.add(bubble, BorderLayout.EAST);
+        else          row.add(bubble, BorderLayout.WEST);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx   = 0;
+        gbc.gridy   = rowCount++;
+        gbc.weightx = 1.0;
+        gbc.fill    = GridBagConstraints.HORIZONTAL;
+        gbc.anchor  = GridBagConstraints.NORTH;
+        gbc.insets  = new Insets(0, 0, 0, 0);
+
+        chatArea.add(row, gbc);
+
+        // Filler to push rows to top
+        GridBagConstraints filler = new GridBagConstraints();
+        filler.gridx   = 0;
+        filler.gridy   = rowCount;
+        filler.weighty = 1.0;
+        filler.fill    = GridBagConstraints.VERTICAL;
+        // Remove old filler if exists, add new one
+        if (rowCount > 1) {
+            chatArea.remove(chatArea.getComponentCount() - 1);
+            chatArea.add(new JPanel() {{ setOpaque(false); }}, filler);
+        } else {
+            chatArea.add(new JPanel() {{ setOpaque(false); }}, filler);
+        }
+
+        chatArea.revalidate();
+        chatArea.repaint();
 
         // Auto-scroll to bottom
-        SwingUtilities.invokeLater(() -> {
-            JScrollBar sb = null;
-            for (Component c : f.getContentPane().getComponents()) {
-                if (c instanceof JScrollPane) {
-                    sb = ((JScrollPane) c).getVerticalScrollBar();
-                }
-            }
-            // scroll via the static reference
-        });
+        SwingUtilities.invokeLater(() ->
+            scrollPane.getVerticalScrollBar().setValue(
+                scrollPane.getVerticalScrollBar().getMaximum()
+            )
+        );
     }
 
-    // ── Socket server (background thread) ───────────────────────────
+    // ── Socket server ────────────────────────────────────────────────
     public static void startServer() {
         new Thread(() -> {
             try (ServerSocket skt = new ServerSocket(6001)) {
                 System.out.println("Server listening on port 6001…");
                 Socket s = skt.accept();
                 System.out.println("Client connected!");
-                DataInputStream  din  = new DataInputStream(s.getInputStream());
+                DataInputStream din = new DataInputStream(s.getInputStream());
                 dout = new DataOutputStream(s.getOutputStream());
-
                 while (true) {
                     String msg = din.readUTF();
                     SwingUtilities.invokeLater(() -> addBubble(msg, false));
